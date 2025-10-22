@@ -1,8 +1,11 @@
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import fs from "fs";
-
+import express from "express"; // ✅ Added
 dotenv.config();
+
+const app = express(); // ✅ Fake web server for Render
+const PORT = process.env.PORT || 3000; // ✅ Required for Render
 
 const INSTAGRAM_BUSINESS_ID = process.env.INSTAGRAM_BUSINESS_ID;
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
@@ -41,7 +44,7 @@ async function waitForMediaReady(mediaId) {
       if (data.status_code === "READY") return;
 
       console.log("⏳ Media not ready yet, waiting 60 seconds...");
-      await new Promise((r) => setTimeout(r, 60000)); // 10 sec
+      await new Promise((r) => setTimeout(r, 60000));
     } catch (err) {
       console.error("❌ Error checking media status:", err.message);
       await new Promise((r) => setTimeout(r, 10000));
@@ -66,6 +69,7 @@ async function postReel(videoUrl, caption) {
         }),
       }
     );
+
     const createData = await createRes.json();
     console.log("Create Response:", createData);
 
@@ -100,7 +104,7 @@ async function postReel(videoUrl, caption) {
   }
 }
 
-// Random delay between 1–3 hours (optional)
+// Random delay between 1–3 hours
 function getRandomDelay() {
   const min = 60 * 60 * 1000; // 1 hour
   const max = 3 * 60 * 60 * 1000; // 3 hours
@@ -126,10 +130,12 @@ async function startPosting() {
     // Save current index
     saveNextIndex(index + 1);
 
-    // Optional: wait 1–3 hours before next post
+    // Wait before next post
     if (index < reels.length - 1) {
       const delay = getRandomDelay();
-      console.log(`⏳ Waiting ${Math.floor(delay / 1000 / 60)} minutes for next post...`);
+      console.log(
+        `⏳ Waiting ${Math.floor(delay / 1000 / 60)} minutes for next post...`
+      );
       await new Promise((r) => setTimeout(r, delay));
     }
 
@@ -139,5 +145,14 @@ async function startPosting() {
   console.log("✅ All reels posted. Script will now stop.");
 }
 
-// Start autoposter
+// ✅ Start autoposter in background
 startPosting();
+
+// ✅ Fake web server just to keep Render alive
+app.get("/", (req, res) => {
+  res.send("🚀 Instagram AutoPoster running on Render!");
+});
+
+app.listen(PORT, () =>
+  console.log(`🌍 Render keep-alive server listening on port ${PORT}`)
+);

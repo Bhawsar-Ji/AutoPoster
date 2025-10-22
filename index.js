@@ -13,7 +13,7 @@ const indexFile = "./currentIndex.txt";
 // Read saved index (last posted position)
 function getCurrentIndex() {
   try {
-    return parseInt(fs.readFileSync(indexFile, "utf-8"));
+    return parseInt(fs.readFileSync(indexFile, "utf-8")) || 0;
   } catch {
     return 0;
   }
@@ -24,35 +24,59 @@ function saveNextIndex(index) {
   fs.writeFileSync(indexFile, index.toString());
 }
 
-// Load reels dynamically (if updated)
+// Load reels dynamically
 function loadReels() {
   return JSON.parse(fs.readFileSync(reelsFile, "utf-8"));
+}
+
+// Wait until media is ready
+async function waitForMediaReady(mediaId) {
+  while (true) {
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/v16.0/${mediaId}?fields=status_code&access_token=${ACCESS_TOKEN}`
+      );
+      const data = await res.json();
+
+      if (data.status_code === "READY") return;
+
+      console.log("⏳ Media not ready yet, waiting 60 seconds...");
+      await new Promise((r) => setTimeout(r, 60000)); // 10 sec
+    } catch (err) {
+      console.error("❌ Error checking media status:", err.message);
+      await new Promise((r) => setTimeout(r, 10000));
+    }
+  }
 }
 
 // Upload + publish reel
 async function postReel(videoUrl, caption) {
   try {
-    // Step 1: Create upload container
+    // Step 1: Create media container
     const createRes = await fetch(
-      `https://graph.facebook.com/v21.0/${INSTAGRAM_BUSINESS_ID}/media`,
+      `https://graph.facebook.com/v16.0/${INSTAGRAM_BUSINESS_ID}/media`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           media_type: "REELS",
-          videoUrl: videoUrl,
+          video_url: videoUrl,
           caption,
           access_token: ACCESS_TOKEN,
         }),
       }
     );
     const createData = await createRes.json();
+    console.log("Create Response:", createData);
 
-    if (!createData.id) throw new Error("Failed to create container");
+    if (!createData.id) throw new Error("Failed to create media container");
 
-    // Step 2: Publish the reel
+    // Step 2: Wait until media is ready
+    await waitForMediaReady(createData.id);
+
+    // Step 3: Publish the reel
     const publishRes = await fetch(
-      `https://graph.facebook.com/v21.0/${INSTAGRAM_BUSINESS_ID}/media_publish`,
+      `https://graph.facebook.com/v16.0/${INSTAGRAM_BUSINESS_ID}/media_publish`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -64,9 +88,10 @@ async function postReel(videoUrl, caption) {
     );
 
     const publishData = await publishRes.json();
+    console.log("Publish Response:", publishData);
 
     if (publishData.id) {
-      console.log("✅ Reel published successfully!");
+      console.log(`✅ Reel published successfully!`);
     } else {
       console.error("❌ Failed to publish reel:", publishData);
     }
@@ -75,14 +100,14 @@ async function postReel(videoUrl, caption) {
   }
 }
 
-// Random delay between 1–3 hours
+// Random delay between 1–3 hours (optional)
 function getRandomDelay() {
   const min = 60 * 60 * 1000; // 1 hour
   const max = 3 * 60 * 60 * 1000; // 3 hours
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Main loop
+// Main posting loop
 async function startPosting() {
   let index = getCurrentIndex();
   const reels = loadReels();
@@ -93,14 +118,15 @@ async function startPosting() {
   }
 
   while (index < reels.length) {
-    const { url, caption } = reels[index];
-    console.log(`🎬 Posting reel ${index + 1}/${reels.length}: ${caption}`);
-    await postReel(url, caption);
+    const { video_url, caption } = reels[index];
 
-    // Save current index (for next restart)
+    console.log(`🎬 Posting reel ${index + 1}/${reels.length}: ${caption}`);
+    await postReel(video_url, caption);
+
+    // Save current index
     saveNextIndex(index + 1);
 
-    // Wait random delay (1–3 hours)
+    // Optional: wait 1–3 hours before next post
     if (index < reels.length - 1) {
       const delay = getRandomDelay();
       console.log(`⏳ Waiting ${Math.floor(delay / 1000 / 60)} minutes for next post...`);
@@ -113,4 +139,5 @@ async function startPosting() {
   console.log("✅ All reels posted. Script will now stop.");
 }
 
+// Start autoposter
 startPosting();

@@ -30,7 +30,7 @@ function loadReels() {
 }
 
 // Upload + publish reel
-async function postReel(video_url, caption) {
+async function postReel(videoUrl, caption) {
   try {
     // Step 1: Create upload container
     const createRes = await fetch(
@@ -40,7 +40,7 @@ async function postReel(video_url, caption) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           media_type: "REELS",
-          videoUrl: video_url,
+          videoUrl: videoUrl,
           caption,
           access_token: ACCESS_TOKEN,
         }),

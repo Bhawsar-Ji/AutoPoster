@@ -40,7 +40,7 @@ async function postReel(video_url, caption) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           media_type: "REELS",
-          video_url: video_url,
+          videoUrl: video_url,
           caption,
           access_token: ACCESS_TOKEN,
         }),

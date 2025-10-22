@@ -41,7 +41,7 @@ async function waitForMediaReady(mediaId) {
       );
       const data = await res.json();
 
-      if (data.status_code === "READY") return;
+      if (data.status_code === "FINISHED") return;
 
       console.log("⏳ Media not ready yet, waiting 60 seconds...");
       await new Promise((r) => setTimeout(r, 60000));

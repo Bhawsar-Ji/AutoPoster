@@ -1,16 +1,17 @@
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import fs from "fs";
-import express from "express"; // ✅ Added
+import express from "express";
+
 dotenv.config();
 
-const app = express(); // ✅ Fake web server for Render
-const PORT = process.env.PORT || 3000; // ✅ Required for Render
+const app = express(); // Fake web server for Render
+const PORT = process.env.PORT || 3000;
 
 const INSTAGRAM_BUSINESS_ID = process.env.INSTAGRAM_BUSINESS_ID;
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 
-const reelsFile = "./reels.json";
+const reelsFile = "./reels.json"; // ✅ Updated to new JSON
 const indexFile = "./currentIndex.txt";
 
 // Read saved index (last posted position)
@@ -122,10 +123,10 @@ async function startPosting() {
   }
 
   while (index < reels.length) {
-    const { video_url, caption } = reels[index];
+    const { transformed_url, caption } = reels[index]; // ✅ Updated key
 
     console.log(`🎬 Posting reel ${index + 1}/${reels.length}: ${caption}`);
-    await postReel(video_url, caption);
+    await postReel(transformed_url, caption); // ✅ Use transformed_url
 
     // Save current index
     saveNextIndex(index + 1);
